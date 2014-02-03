@@ -4,16 +4,19 @@ $(document).ready(function(){
     var context = canvas.getContext("2d");
     var w = $("#canvas").width();
     var h = $("#canvas").height();
+
+    canvas.addEventListener('click', handleClick);
     
     //Lets save the cell width in a variable for easy control
     var cellWidth = 5;
     var direction; // direction
-    var move;
-    var food; // location of food
+    var move; // whether or not the worm is moving
+    var food = {x: 10, y:10}; // location of food
+    var max_scentDistance = (w/cellWidth)/4;
     
     //Lets create the snake now
     var snake_array; //an array of cells to make up the snake
-    var smell_array; //a 2x2 array of cells with smell signal strength
+    var scent_array; //a 2x2 array of cells with smell signal strength
 
     var brain = (function () {
         var my = {},
@@ -33,17 +36,23 @@ $(document).ready(function(){
     
     function init()
     {
-        direction = "up"; //default direction
+        //direction = "up"; //default direction
         
         create_worm();
-        create_food(); //Now we can see the food particle
-        //finally lets display the score
-        score = 0;
+        //create_food(); //Now we can see the food particle
         
         //Lets move the snake now using a timer which will trigger the paint function
         //every 60ms
-        if(typeof game_loop != "undefined") clearInterval(game_loop);
-        game_loop = setInterval(paint, 60);
+        //if(typeof game_loop != "undefined") clearInterval(game_loop);
+        //game_loop = setInterval(paint, 60);
+        scent_array = [];
+        for(var i = 0; i < (w/cellWidth); i++) {
+            scent_array[i] = [];
+            for(var j = 0; j < (h/cellWidth); j++) {
+                scent_array[i][j] = 0;
+            }
+        }
+        paint();
     }
     init();
     
@@ -58,110 +67,106 @@ $(document).ready(function(){
         }
     }
     
-    //Lets create the food now
-    function create_food()
-    {
-        food = {
-            x: Math.round(Math.random()*(w-cellWidth)/cellWidth), 
-            y: Math.round(Math.random()*(h-cellWidth)/cellWidth), 
-        };
-        //This will create a cell with x/y between 0-44
-        //Because there are 45(450/10) positions accross the rows and columns
-    }
-    
     //Lets paint the snake now
     function paint()
     {
+        console.log('paint');
         //To avoid the snake trail we need to paint the BG on every frame
-        //Lets paint the canvas now
-        context.fillStyle = "white";
-        context.fillRect(0, 0, w, h);
-        context.strokeStyle = "black";
-        context.strokeRect(0, 0, w, h);
+        //Refresh the canvas
+        paint_refresh("white");
         
         //The movement code for the snake to come here.
         //The logic is simple
         //Pop out the tail cell and place it infront of the head cell
-        var nx = snake_array[0].x;
-        var ny = snake_array[0].y;
+        var next_x = snake_array[0].x;
+        var next_y = snake_array[0].y;
         //These were the position of the head cell.
         //We will increment it to get the new head position
         //Lets add proper direction based movement now
-        if(direction == "right") nx++;
-        else if(direction == "left") nx--;
-        else if(direction == "up") ny--;
-        else if(direction == "down") ny++;
+        if(direction == "right") next_x++;
+        else if(direction == "left") next_x--;
+        else if(direction == "up") next_y--;
+        else if(direction == "down") next_y++;
         
-        //Lets add the game over clauses now
-        //This will restart the game if the snake hits the wall
-        //Lets add the code for body collision
-        //Now if the head of the snake bumps into its body, the game will restart
-        if(nx == -1 || nx == w/cellWidth || ny == -1 || ny == h/cellWidth || check_collision(nx, ny, snake_array))
-        {
-            //restart game
-            init();
-            //Lets organize the code a bit now.
-            return;
+        paint_grid("#FFFFFF", "#E8E8E8");
+
+        paint_cell(food.x, food.y, "black");
+        //paint_scent(food.x, food.y);
+    }
+
+    // Refresh Canvas
+    function paint_refresh(color) {
+        context.fillStyle = color;
+        context.fillRect(0, 0, w, h);
+        context.strokeStyle = color;
+        context.strokeRect(0, 0, w, h);
+    }
+
+    function paint_scent(x, y, color) {
+        color = "rgb(0, 0, 0)";
+        paint_cell(x,y, color);
+        for(var i = 0; i < (w/cellWidth); i++) {
+            for(var j = 0; j < (h/cellWidth); j++) {
+                var strength = scent_array[i][j];
+                var color_val = (255-Math.round((strength * 255))).toString();
+                color = "rgb(" + color_val + ", " + color_val + ", " + color_val + ")";
+                paint_cell(i, j, color, color);
+            }
         }
-        
-        //Lets write the code to make the snake eat the food
-        //The logic is simple
-        //If the new head position matches with that of the food,
-        //Create a new head instead of moving the tail
-        if(nx == food.x && ny == food.y)
-        {
-            var tail = {x: nx, y: ny};
-            score++;
-            //Create new food
-            create_food();
+    }
+
+    function distance(x1, y1, x2, y2) { 
+        return Math.sqrt(Math.pow((x2-x1),2)+ Math.pow((y2-y1),2));
+    }
+
+    // Paint the grid
+    function paint_grid(innerColor, outerColor) {
+        for(var i = 0; i < (w/cellWidth); i++) {
+            for(var j = 0; j < (h/cellWidth); j++) {
+                paint_cell(i, j, innerColor, outerColor);
+            }
         }
-        else
-        {
-            var tail = snake_array.pop(); //pops out the last cell
-            tail.x = nx; tail.y = ny;
-        }
-        //The snake can now eat the food.
-        
-        snake_array.unshift(tail); //puts back the tail as the first cell
-        
-        for(var i = 0; i < snake_array.length; i++)
-        {
-            var c = snake_array[i];
-            //Lets paint 10px wide cells
-            paint_cell(c.x, c.y);
-        }
-        
-        //Lets paint the food
-        paint_cell(food.x, food.y);
     }
     
     //Lets first create a generic function to paint cells
-    function paint_cell(x, y)
+    function paint_cell(x, y, innerColor, outerColor)
     {
-        context.fillStyle = "#737374";
-        context.fillRect(x*cellWidth, y*cellWidth, cellWidth, cellWidth);
-    }
-    
-    function check_collision(x, y, array)
-    {
-        //This function will check if the provided x/y coordinates exist
-        //in an array of cells or not
-        for(var i = 0; i < array.length; i++)
-        {
-            if(array[i].x == x && array[i].y == y)
-             return true;
+        if (outerColor === undefined) {
+            outerColor = innerColor;
         }
-        return false;
+        context.fillStyle = innerColor;
+        context.fillRect(x*cellWidth, y*cellWidth, cellWidth, cellWidth);
+
+        context.strokeStyle = outerColor;
+        context.strokeRect(x*cellWidth, y*cellWidth, cellWidth, cellWidth);
+    }
+
+    function changeFoodLocation(x, y) {
+        paint_cell(x, y, "black");
+        food.x = x;
+        food.y = y;
+        set_scent_strength(x,y);
+    }
+
+    function set_scent_strength(x,y) {
+        for(var i = 0; i < (w/cellWidth); i++) {
+            for(var j = 0; j < (h/cellWidth); j++) {
+                var dist = distance(x,y,i,j);
+                if (dist >= max_scentDistance) {
+                     scent_array[i][j] = 0;
+                } else {
+                    scent_array[i][j] = (max_scentDistance-dist) / max_scentDistance;
+                }
+            }
+        }
     }
     
-    //Lets add the keyboard controls now
-    $(document).keydown(function(e){
-        var key = e.which;
-        //We will add another clause to prevent reverse gear
-        if(key == "37" && direction != "right") direction = "left";
-        else if(key == "38" && direction != "down") direction = "up";
-        else if(key == "39" && direction != "left") direction = "right";
-        else if(key == "40" && direction != "up") direction = "down";
-        //The snake is now keyboard controllable
-    });
+    function handleClick(e) {
+        clicked_x = Math.floor(e.offsetX/cellWidth);
+        clicked_y = Math.floor(e.offsetY/cellWidth);
+        changeFoodLocation(clicked_x, clicked_y);
+
+        paint();
+    }
+    
 });
