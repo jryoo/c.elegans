@@ -1,6 +1,6 @@
-v.elegans
+C. elegans
 =========
 
-node.js App
-
-Virtual elegans
+- node.js
+- canvas
+ 
