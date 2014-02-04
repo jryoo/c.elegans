@@ -13,6 +13,7 @@ $(document).ready(function(){
     //var move; // whether or not the worm is moving
     var food = {x: 10, y:10}; // location of food
     var max_scentDistance = (w/cellWidth)/4;
+    var direction = "up";
 
     var config = {
         show_grid: true,
@@ -37,8 +38,12 @@ $(document).ready(function(){
         }
 
         my.moduleProperty = 1;
-        my.moduleMethod = function () {
-            // ...
+        my.getInstructions = function (data) {
+            // forward
+            // turn-left
+            // turn-right
+            // reverse
+            return "forward";
         };
 
         return my;
@@ -64,8 +69,8 @@ $(document).ready(function(){
         
         //Lets move the worm now using a timer which will trigger the paint function
         //every 60ms
-        //if(typeof game_loop != "undefined") clearInterval(game_loop);
-        //game_loop = setInterval(paint, 60);
+        if(typeof game_loop != "undefined") clearInterval(game_loop);
+        game_loop = setInterval(iterate, 1000);
 
         // initialize the scent_array
         scent_array = [];
@@ -87,7 +92,6 @@ $(document).ready(function(){
             //This will create a horizontal worm starting from the top left
             worm_array.push({x: ((w/cellWidth)/2) - 1 , y: (w/cellWidth) - i });
         }
-        console.log(worm_array);
     }
 
     function iterate() {
@@ -99,10 +103,16 @@ $(document).ready(function(){
         //These were the position of the head cell.
         //We will increment it to get the new head position
         //Lets add proper direction based movement now
+        instruction = brain.getInstructions();
+        direction = "up";
         if(direction == "right") next_x++;
         else if(direction == "left") next_x--;
         else if(direction == "up") next_y--;
         else if(direction == "down") next_y++;
+        var tail = worm_array.pop(); //pops out the last cell
+        tail.x = next_x; tail.y = next_y;
+        worm_array.unshift(tail);
+        paint();
     }
     //Lets paint the worm now
     function paint()
