@@ -2,8 +2,8 @@ $(document).ready(function(){
     //Canvas stuff
     var canvas = $("#canvas")[0];
     var context = canvas.getContext("2d");
-    var w = $("#canvas").width();
-    var h = $("#canvas").height();
+    var w = Math.floor($("#canvas").width());
+    var h = Math.floor($("#canvas").height());
 
     canvas.addEventListener('click', handleClick);
     
@@ -15,8 +15,8 @@ $(document).ready(function(){
     var max_scentDistance = (w/cellWidth)/4;
 
     var config = {
-        show_grid: false,
-        show_scent: false,
+        show_grid: true,
+        show_scent: true,
         grid_color: "#E8E8E8",
         food_color: "#737374",
         worm_color: "#737374",
@@ -24,8 +24,8 @@ $(document).ready(function(){
         weakScent_color: "#FFFFFF"
     };
     
-    //Lets create the snake now
-    var snake_array; //an array of cells to make up the snake
+    //Lets create the worm now
+    var worm_array; //an array of cells to make up the worm
     var scent_array; //a 2x2 array of cells with smell signal strength
 
     var brain = (function () {
@@ -43,6 +43,17 @@ $(document).ready(function(){
 
         return my;
     }());
+
+    function check_collision(x, y, array) {
+        //This function will check if the provided x/y coordinates exist
+        //in an array of cells or not
+        for(var i = 0; i < array.length; i++)
+        {
+            if(array[i].x == x && array[i].y == y)
+             return true;
+        }
+        return false;
+    }
     
     function init()
     {
@@ -51,7 +62,7 @@ $(document).ready(function(){
         create_worm();
         //create_food(); //Now we can see the food particle
         
-        //Lets move the snake now using a timer which will trigger the paint function
+        //Lets move the worm now using a timer which will trigger the paint function
         //every 60ms
         //if(typeof game_loop != "undefined") clearInterval(game_loop);
         //game_loop = setInterval(paint, 60);
@@ -70,22 +81,21 @@ $(document).ready(function(){
     
     function create_worm()
     {
-        var length = 5; //Length of the snake
-        snake_array = []; //Empty array to start with
-        for(var i = length-1; i>=0; i--)
-        {
-            //This will create a horizontal snake starting from the top left
-            snake_array.push({x: Math.round(((w/cellWidth)/2) - 1) , y: Math.round((w/cellWidth) - i) });
+        var length = 5; //Length of the worm
+        worm_array = []; //Empty array to start with
+        for(var i = length; i>=0; i--) {
+            //This will create a horizontal worm starting from the top left
+            worm_array.push({x: ((w/cellWidth)/2) - 1 , y: (w/cellWidth) - i });
         }
-        console.log(snake_array);
+        console.log(worm_array);
     }
-    
+
     function iterate() {
-        //The movement code for the snake to come here.
+        //The movement code for the worm to come here.
         //The logic is simple
         //Pop out the tail cell and place it infront of the head cell
-        var next_x = snake_array[0].x;
-        var next_y = snake_array[0].y;
+        var next_x = worm_array[0].x;
+        var next_y = worm_array[0].y;
         //These were the position of the head cell.
         //We will increment it to get the new head position
         //Lets add proper direction based movement now
@@ -94,11 +104,11 @@ $(document).ready(function(){
         else if(direction == "up") next_y--;
         else if(direction == "down") next_y++;
     }
-    //Lets paint the snake now
+    //Lets paint the worm now
     function paint()
     {
         console.log('paint');
-        //To avoid the snake trail we need to paint the BG on every frame
+        //To avoid the worm trail we need to paint the BG on every frame
         //Refresh the canvas
         paint_refresh("white");
 
@@ -110,7 +120,9 @@ $(document).ready(function(){
             paint_scent(food.x, food.y);
         }
         paint_cell(food.x, food.y, "black");
+        paint_worm();
     }
+
 
     // Refresh Canvas
     function paint_refresh(color) {
@@ -146,12 +158,11 @@ $(document).ready(function(){
 */      return '#' + rainbow.colourAt(num);
     }
 
-    function paint_snake() {
-        for(var i = 0; i < snake_array.length; i++)
+    function paint_worm() {
+        for(var i = 0; i < worm_array.length; i++)
         {
-            var c = snake_array[i];
-            //Lets paint 10px wide cells
-            paint_cell(c.x, c.y, config.snake_color);
+            var c = worm_array[i];
+            paint_cell(c.x, c.y, config.worm_color);
         }
     }
 
@@ -205,8 +216,23 @@ $(document).ready(function(){
     function handleClick(e) {
         clicked_x = Math.floor(e.offsetX/cellWidth);
         clicked_y = Math.floor(e.offsetY/cellWidth);
+        max_x = (w/cellWidth)-1;
+        min_x = 0;
+        max_y = (h/cellWidth)-1;
+        min_y = 0;
+        if (clicked_x > max_x) {
+            clicked_x = max_x;
+        } else if (clicked_x < min_x) {
+            clicked_x = min_x;
+        }
+        if (clicked_y > max_y) {
+            clicked_y = max_y;
+        } else if (clicked_y < min_y) { 
+            clicked_y = min_y;
+        }
         changeFoodLocation(clicked_x, clicked_y);
-
+        console.log(clicked_x);
+        console.log(clicked_y);
         paint();
     }
     

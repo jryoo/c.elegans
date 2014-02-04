@@ -24,3 +24,11 @@ $ nvm use v0.10.25
 $ npm install
 $ node app.js
 ```
+
+### Research
+- [http://www.wormbook.org/chapters/www_behavior/behavior.html#sec2_1](http://www.wormbook.org/chapters/www_behavior/behavior.html#sec2_1)
+
+### Behavior
+
+- Hitting wall or itself will be a soft-touch ( --> turn)
+- Hitting the mouse will be a hard-touch ( --> reverse)
