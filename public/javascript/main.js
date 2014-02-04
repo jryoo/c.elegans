@@ -9,10 +9,20 @@ $(document).ready(function(){
     
     //Lets save the cell width in a variable for easy control
     var cellWidth = 5;
-    var direction; // direction
-    var move; // whether or not the worm is moving
+    //var direction; // direction
+    //var move; // whether or not the worm is moving
     var food = {x: 10, y:10}; // location of food
     var max_scentDistance = (w/cellWidth)/4;
+
+    var config = {
+        show_grid: false,
+        show_scent: false,
+        grid_color: "#E8E8E8",
+        food_color: "#737374",
+        worm_color: "#737374",
+        strongScent_color: "#B3C5F7",
+        weakScent_color: "#FFFFFF"
+    };
     
     //Lets create the snake now
     var snake_array; //an array of cells to make up the snake
@@ -45,6 +55,8 @@ $(document).ready(function(){
         //every 60ms
         //if(typeof game_loop != "undefined") clearInterval(game_loop);
         //game_loop = setInterval(paint, 60);
+
+        // initialize the scent_array
         scent_array = [];
         for(var i = 0; i < (w/cellWidth); i++) {
             scent_array[i] = [];
@@ -63,18 +75,12 @@ $(document).ready(function(){
         for(var i = length-1; i>=0; i--)
         {
             //This will create a horizontal snake starting from the top left
-            snake_array.push({x: ((w/cellWidth)/2) - 1 , y: (w/cellWidth) - i });
+            snake_array.push({x: Math.round(((w/cellWidth)/2) - 1) , y: Math.round((w/cellWidth) - i) });
         }
+        console.log(snake_array);
     }
     
-    //Lets paint the snake now
-    function paint()
-    {
-        console.log('paint');
-        //To avoid the snake trail we need to paint the BG on every frame
-        //Refresh the canvas
-        paint_refresh("white");
-        
+    function iterate() {
         //The movement code for the snake to come here.
         //The logic is simple
         //Pop out the tail cell and place it infront of the head cell
@@ -87,11 +93,23 @@ $(document).ready(function(){
         else if(direction == "left") next_x--;
         else if(direction == "up") next_y--;
         else if(direction == "down") next_y++;
-        
-        paint_grid("#FFFFFF", "#E8E8E8");
+    }
+    //Lets paint the snake now
+    function paint()
+    {
+        console.log('paint');
+        //To avoid the snake trail we need to paint the BG on every frame
+        //Refresh the canvas
+        paint_refresh("white");
 
+        // Paint the grid
+        if (config.show_grid) {
+            paint_grid("#FFFFFF", config.grid_color);
+        }
+        if (config.show_scent) {
+            paint_scent(food.x, food.y);
+        }
         paint_cell(food.x, food.y, "black");
-        //paint_scent(food.x, food.y);
     }
 
     // Refresh Canvas
@@ -102,16 +120,38 @@ $(document).ready(function(){
         context.strokeRect(0, 0, w, h);
     }
 
-    function paint_scent(x, y, color) {
-        color = "rgb(0, 0, 0)";
-        paint_cell(x,y, color);
+    function paint_scent(x, y) {
+        //TODO: allow different colors
         for(var i = 0; i < (w/cellWidth); i++) {
             for(var j = 0; j < (h/cellWidth); j++) {
                 var strength = scent_array[i][j];
-                var color_val = (255-Math.round((strength * 255))).toString();
-                color = "rgb(" + color_val + ", " + color_val + ", " + color_val + ")";
-                paint_cell(i, j, color, color);
+                if (strength > 0) {
+                    //var color_val = (255-Math.round((strength * 255))).toString();
+                    //color = "rgb(" + color_val + ", " + color_val + ", " + color_val + ")";
+                    color = getColorRange(config.weakScent_color, config.strongScent_color, Math.round((strength * 100)));
+                    paint_cell(i, j, color, (config.show_grid ? config.grid_color : color));
+                }
             }
+        }
+    }
+
+    function getColorRange(lowColor, highColor, num) {
+        var rainbow = new Rainbow(); 
+        rainbow.setSpectrum(lowColor, highColor);
+        /*var s = [];
+        for (var i = 1; i <= numberOfItems; i++) {
+            var hexColour = rainbow.colourAt(i);
+            s[i] += '#' + hexColour + ', ';
+        }
+*/      return '#' + rainbow.colourAt(num);
+    }
+
+    function paint_snake() {
+        for(var i = 0; i < snake_array.length; i++)
+        {
+            var c = snake_array[i];
+            //Lets paint 10px wide cells
+            paint_cell(c.x, c.y, config.snake_color);
         }
     }
 
@@ -129,14 +169,15 @@ $(document).ready(function(){
     }
     
     //Lets first create a generic function to paint cells
-    function paint_cell(x, y, innerColor, outerColor)
-    {
+    function paint_cell(x, y, innerColor, outerColor) {
         if (outerColor === undefined) {
             outerColor = innerColor;
         }
+        // Fill in the rectangle with innerColor
         context.fillStyle = innerColor;
         context.fillRect(x*cellWidth, y*cellWidth, cellWidth, cellWidth);
 
+        // Fill in the border with outerColor
         context.strokeStyle = outerColor;
         context.strokeRect(x*cellWidth, y*cellWidth, cellWidth, cellWidth);
     }
