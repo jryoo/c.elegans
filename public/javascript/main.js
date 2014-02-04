@@ -16,7 +16,7 @@ $(document).ready(function(){
     var direction = "up";
 
     var config = {
-        show_grid: true,
+        show_grid: false,
         show_scent: true,
         grid_color: "#E8E8E8",
         food_color: "#737374",
@@ -88,9 +88,9 @@ $(document).ready(function(){
     {
         var length = 5; //Length of the worm
         worm_array = []; //Empty array to start with
-        for(var i = length; i>=0; i--) {
+        for(var i = length-1; i>=0; i--) {
             //This will create a horizontal worm starting from the top left
-            worm_array.push({x: ((w/cellWidth)/2) - 1 , y: (w/cellWidth) - i });
+            worm_array.push({x: ((w/cellWidth)/2) - 1 , y: ((w/cellWidth) - 1) - i });
         }
     }
 
@@ -199,8 +199,8 @@ $(document).ready(function(){
         context.fillRect(x*cellWidth, y*cellWidth, cellWidth, cellWidth);
 
         // Fill in the border with outerColor
-        context.strokeStyle = outerColor;
-        context.strokeRect(x*cellWidth, y*cellWidth, cellWidth, cellWidth);
+        //context.strokeStyle = outerColor;
+        //context.strokeRect(x*cellWidth, y*cellWidth, cellWidth, cellWidth);
     }
 
     function changeFoodLocation(x, y) {
