@@ -11,9 +11,14 @@ $(document).ready(function(){
     var cellWidth = 5;
     //var direction; // direction
     //var move; // whether or not the worm is moving
-    var food = {x: 10, y:10}; // location of food
-    var max_scentDistance = (w/cellWidth)/4;
-    var direction = "up";
+    var food; // location of food
+    var max_scentDistance;
+    var direction;
+    var directionMap;
+
+    //Lets create the worm now
+    var worm_array; //an array of cells to make up the worm
+    var scent_array; //a 2x2 array of cells with smell signal strength
 
     var config = {
         show_grid: false,
@@ -25,10 +30,6 @@ $(document).ready(function(){
         weakScent_color: "#FFFFFF"
     };
     
-    //Lets create the worm now
-    var worm_array; //an array of cells to make up the worm
-    var scent_array; //a 2x2 array of cells with smell signal strength
-
     var brain = (function () {
         var my = {},
             signalStrength = 0;
@@ -39,15 +40,85 @@ $(document).ready(function(){
 
         my.moduleProperty = 1;
         my.getInstructions = function (data) {
+            var instructionSet = ['forward', 'turn-left', 'turn-right', 'reverse'];
             // forward
             // turn-left
             // turn-right
             // reverse
-            return "forward";
+            var i = 0;
+            if (data) {
+                console.log('collide');
+                i = 3;
+            } else {
+                i = Math.floor((Math.random()*3));
+            }
+            console.log(instructionSet[i]);
+            return instructionSet[i];
         };
 
         return my;
     }());
+    
+    function init() {
+        //direction = "up"; //default direction
+        directionMap = ["up", "right", "down", "left"];
+
+        food = {x: 10, y:10};
+        max_scentDistance = (w/cellWidth)/4;
+        
+        create_worm();
+        //create_food(); //Now we can see the food particle
+
+        // initialize the scent_array
+        scent_array = [];
+        for(var i = 0; i < (w/cellWidth); i++) {
+            scent_array[i] = [];
+            for(var j = 0; j < (h/cellWidth); j++) {
+                scent_array[i][j] = 0;
+            }
+        }
+        set_scent_strength(food.x,food.y);
+        paint();
+
+        //Lets move the worm now using a timer which will trigger the paint function
+        //every 1000ms
+        if(typeof game_loop != "undefined") clearInterval(game_loop);
+        game_loop = setInterval(iterate, 100);
+    }
+    init();
+    
+    function create_worm() {
+        var length = 5; //Length of the worm
+        worm_array = []; //Empty array to start with
+        for(var i = length-1; i>=0; i--) {
+            //This will create a horizontal worm starting from the top left
+            worm_array.push({x: ((w/cellWidth)/2) - 1 , y: ((w/cellWidth) - 10) - i });
+        }
+    }
+
+    function iterate() {
+        //The movement code for the worm to come here.
+        //The logic is simple
+        //These were the position of the head cell.
+        //We will increment it to get the new head position
+        //Lets add proper direction based movement now
+        //var next_location = get_nextLocation(worm_array, get_directions("forward"));
+        //var self_collision = check_collision(next_location.x, next_location.y, worm_array);
+
+        var instruction = brain.getInstructions();
+        var next_location = get_nextLocation(worm_array, get_directions(instruction));
+
+        // Handle Instructions
+        if (instruction == 'reverse') {
+            worm_array = worm_array.reverse();
+        }
+
+        var tail = worm_array.pop(); //pops out the last cell
+        tail.x = next_location.x; tail.y = next_location.y;
+        worm_array.unshift(tail);
+        paint();
+    }
+
 
     function check_collision(x, y, array) {
         //This function will check if the provided x/y coordinates exist
@@ -59,65 +130,37 @@ $(document).ready(function(){
         }
         return false;
     }
-    
-    function init()
-    {
-        //direction = "up"; //default direction
-        
-        create_worm();
-        //create_food(); //Now we can see the food particle
-        
-        //Lets move the worm now using a timer which will trigger the paint function
-        //every 60ms
-        if(typeof game_loop != "undefined") clearInterval(game_loop);
-        game_loop = setInterval(iterate, 1000);
 
-        // initialize the scent_array
-        scent_array = [];
-        for(var i = 0; i < (w/cellWidth); i++) {
-            scent_array[i] = [];
-            for(var j = 0; j < (h/cellWidth); j++) {
-                scent_array[i][j] = 0;
-            }
-        }
-        paint();
-    }
-    init();
-    
-    function create_worm()
-    {
-        var length = 5; //Length of the worm
-        worm_array = []; //Empty array to start with
-        for(var i = length-1; i>=0; i--) {
-            //This will create a horizontal worm starting from the top left
-            worm_array.push({x: ((w/cellWidth)/2) - 1 , y: ((w/cellWidth) - 1) - i });
-        }
+    function get_directions(command) {
+        if (command == "forward") {
+            return directionMap[0];
+        } else if (command == "turn-left") {
+            directionMap.unshift(directionMap.pop());
+            return directionMap[0];
+        } else if (command == "turn-right") {
+            directionMap.push(directionMap.shift());
+            return directionMap[0];
+        } else if (command == "reverse") {
+            directionMap.push(directionMap.shift());
+            directionMap.push(directionMap.shift());
+            return directionMap[0];
+        } 
     }
 
-    function iterate() {
-        //The movement code for the worm to come here.
-        //The logic is simple
+    function get_nextLocation(array, direction) {
         //Pop out the tail cell and place it infront of the head cell
-        var next_x = worm_array[0].x;
-        var next_y = worm_array[0].y;
-        //These were the position of the head cell.
-        //We will increment it to get the new head position
-        //Lets add proper direction based movement now
-        instruction = brain.getInstructions();
-        direction = "up";
+        var next_x = array[0].x;
+        var next_y = array[0].y;
         if(direction == "right") next_x++;
         else if(direction == "left") next_x--;
         else if(direction == "up") next_y--;
         else if(direction == "down") next_y++;
-        var tail = worm_array.pop(); //pops out the last cell
-        tail.x = next_x; tail.y = next_y;
-        worm_array.unshift(tail);
-        paint();
+        return {x: next_x, y: next_y};
     }
+
     //Lets paint the worm now
-    function paint()
-    {
-        console.log('paint');
+    function paint() {
+        console.log('[paint]');
         //To avoid the worm trail we need to paint the BG on every frame
         //Refresh the canvas
         paint_refresh("white");
@@ -241,8 +284,6 @@ $(document).ready(function(){
             clicked_y = min_y;
         }
         changeFoodLocation(clicked_x, clicked_y);
-        console.log(clicked_x);
-        console.log(clicked_y);
         paint();
     }
     
